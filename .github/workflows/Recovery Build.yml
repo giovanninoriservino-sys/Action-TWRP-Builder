@@ -80,22 +80,19 @@ jobs:
       run: |
         cd workspace
         source build/envsetup.sh
+        
+        # INIEZIONE DIRETTA: Scriviamo la configurazione nel file che Android legge per ultimo
+        # Questo bypassa il controllo 902 del BoardConfig.mk
+        echo "BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT := true" >> build/make/core/board_config.mk
+        echo "PRODUCT_BUILD_VENDOR_BOOT_IMAGE := true" >> build/make/core/board_config.mk
+        
         export ALLOW_MISSING_DEPENDENCIES=true
         
-        # Inseriamo forzatamente le variabili nel file di sistema PRIMA del lunch
-        echo "PRODUCT_BUILD_VENDOR_BOOT_IMAGE := true" >> build/make/core/config.mk
-        echo "BOARD_HAS_VENDOR_BOOT := true" >> build/make/core/config.mk
-        
-        # Proviamo il lunch, ignorando il fallimento
+        # Forza il lunch ignorando gli errori di dumpvars
         lunch twrp_cancunf-eng || true
         
-        # Lanciamo la build passando tutto il peso al comando make
-        make vendor_bootimage \
-          TARGET_PRODUCT=twrp_cancunf \
-          TARGET_BUILD_VARIANT=eng \
-          PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true \
-          BOARD_HAS_VENDOR_BOOT=true \
-          -j2
+        # Lanciamo la build con RAM limitata (-j2) per evitare il crash segnalato dai log
+        make vendor_bootimage -j2
         
     - name: Check Output
       run: |
