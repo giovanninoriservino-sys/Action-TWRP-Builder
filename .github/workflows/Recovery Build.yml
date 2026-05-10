@@ -81,18 +81,21 @@ jobs:
         cd workspace
         source build/envsetup.sh
         
-        # 1. FORZATURA TOTALE: Diciamo al sistema che la vendor_boot ESISTE
+        # Esportiamo tutto il possibile per convincere il sistema
         export ALLOW_MISSING_DEPENDENCIES=true
         export PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true
-        export BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true
         
-        # 2. IGNORA I CONTROLLI DI SOLA LETTURA
-        # Usiamo un trucco: passiamo la variabile direttamente al comando make
+        # Proviamo il lunch, ma se fallisce andiamo avanti comunque (|| true)
+        lunch twrp_cancunf-eng || true
         
-        lunch twrp_cancunf-eng || true # Il '|| true' serve a non far fallire il workflow se lunch brontola
-        
-        # 3. Lanciamo la build forzando la variabile direttamente nel comando
-        make vendor_bootimage PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true -j$(nproc --all)
+        # Compiliamo passando i parametri critici direttamente al comando make
+        # Questo scavalca i controlli del BoardConfig all'avvio
+        make vendor_bootimage \
+            PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true \
+            BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true \
+            TARGET_PRODUCT=twrp_cancunf \
+            TARGET_BUILD_VARIANT=eng \
+            -j$(nproc --all)
         
     - name: Check Output
       run: |
