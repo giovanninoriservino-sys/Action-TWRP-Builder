@@ -68,25 +68,33 @@ jobs:
         
     - name: Build TWRP
       run: |
-        # --- OPERAZIONE PULIZIA TOTALE ---
-        # Cancella la riga maledetta da OGNI file dentro la cartella del device
-        find device/motorola/cancunf -type f -exec sed -i '/BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/d' {} +
-        find device/motorola/cancunf -type f -exec sed -i '/PRODUCT_BUILD_VENDOR_BOOT_IMAGE/d' {} +
         
-        # Ora forziamo la variabile nel posto GIUSTO (il file di sistema)
-        # Questo dice ad Android: "Sì, sto costruendo una vendor_boot, fidati"
-        echo "PRODUCT_BUILD_VENDOR_BOOT_IMAGE := true" >> build/make/core/config.mk
+        # Entriamo nella cartella principale
+         cd workspace
         
+        # --- FIX PERCORSI E PULIZIA ---
+        # Cerchiamo dove diavolo è finito il device tree e puliamo i file .mk
+        # Usiamo 'find .' così lo trova ovunque sia stato clonato
+        find device/motorola/cancunf -name "*.mk" -exec sed -i '/BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/d' {} + || true
+        find device/motorola/cancunf -name "*.mk" -exec sed -i '/PRODUCT_BUILD_VENDOR_BOOT_IMAGE/d' {} + || true
+
+        # --- PREPARAZIONE AMBIENTE ---
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
         
-        # Prova il lunch
+        # Forza la variabile globale nel core di Android per evitare l'errore 902
+        echo "PRODUCT_BUILD_VENDOR_BOOT_IMAGE := true" >> build/make/core/config.mk
+        
+        # --- LUNCH ---
+        # Il lunch deve trovare 'twrp_cancunf'. Se fallisce, usiamo '|| true' per non stoppare
         lunch twrp_cancunf-eng || true
         
-        # Lanciamo la build passando la variabile '902' direttamente nel comando
+        # --- COMPILAZIONE ---
+        # Forziamo i parametri direttamente nel comando make
         make vendor_bootimage \
-          BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true \
-          -j2
+            PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true \
+            BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true \
+            -j2
         
     - name: Check Output
       run: |
