@@ -72,6 +72,7 @@ jobs:
         else
           cp -r /tmp/device_tree/* device/motorola/cancunf/
         fi
+        ls -R workspace/device/motorola/cancunf
         
         # 6. Pulizia finale della cartella temporanea
         rm -rf /tmp/device_tree
