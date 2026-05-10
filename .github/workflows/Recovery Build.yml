@@ -58,13 +58,19 @@ jobs:
 
     - name: Build TWRP
       run: |
-       cd workspace
-       source build/envsetup.sh
-       export ALLOW_MISSING_DEPENDENCIES=true
-       # Forza il lunch direttamente sul file
-       lunch twrp_${{ env.DEVICE_NAME }}-eng
-       make ${{ env.BUILD_TARGET }} -j$(nproc --all)
-
+        cd workspace
+        source build/envsetup.sh
+        export ALLOW_MISSING_DEPENDENCIES=true
+        
+        # TRUCCO DEL 2026: Definiamo la variabile d'ambiente PRIMA del lunch
+        export PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true
+        
+        # Usiamo il comando completo senza passare per i menù interattivi
+        lunch twrp_cancunf-eng
+        
+        # Lanciamo la compilazione specifica
+        make vendor_bootimage -j$(nproc --all)
+        
     - name: Check Output
       run: |
         ls -lh workspace/out/target/product/${{ env.DEVICE_NAME }}/${{ env.BUILD_TARGET }}.img || echo "File non trovato!"
