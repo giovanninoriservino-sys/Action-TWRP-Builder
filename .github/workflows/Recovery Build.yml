@@ -81,17 +81,16 @@ jobs:
         cd workspace
         source build/envsetup.sh
         
-        # INIEZIONE DIRETTA: Scriviamo la configurazione nel file che Android legge per ultimo
-        # Questo bypassa il controllo 902 del BoardConfig.mk
-        echo "BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT := true" >> build/make/core/board_config.mk
-        echo "PRODUCT_BUILD_VENDOR_BOOT_IMAGE := true" >> build/make/core/board_config.mk
-        
+        # Esportiamo solo l'indispensabile
         export ALLOW_MISSING_DEPENDENCIES=true
         
-        # Forza il lunch ignorando gli errori di dumpvars
-        lunch twrp_cancunf-eng || true
+        # Pulizia preventiva dei file di configurazione che potremmo aver sporcato
+        # (Opzionale ma consigliato per un Rerun)
         
-        # Lanciamo la build con RAM limitata (-j2) per evitare il crash segnalato dai log
+        # Lanciamo il lunch. Se fallisce qui, il problema è il nome dei file nel repo.
+        lunch twrp_cancunf-eng
+        
+        # Usiamo -j1 o -j2 per non far morire la RAM (abbiamo 15.6GB, siamo al limite)
         make vendor_bootimage -j2
         
     - name: Check Output
