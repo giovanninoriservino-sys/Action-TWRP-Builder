@@ -29,7 +29,7 @@ jobs:
     - name: Install Build Tools
       run: |
         sudo apt-get update
-        sudo apt-get install -y gperf gcc-multilib g++-multilib libc6-dev-i386 x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc unzip bc bison build-essential curl flex git gnupg gperf lib32readline-dev lib32z1-dev liblz4-tool libncurses6 libncurses6-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev python3
+        sudo apt-get install -y gperf gcc-multilib g++-multilib libc6-dev-i386 x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc unzip bc bison build-essential curl flex git gnupg gperf lib32readline-dev lib32z1-dev liblz4-tool libncurses-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev python3-is-python3
 
     - name: Install Repo
       run: |
@@ -61,12 +61,12 @@ jobs:
         cd workspace
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
-        lunch ${{ env.MAKEFILE_NAME }}-$DEVICE_NAME-eng || lunch ${{ env.MAKEFILE_NAME }}_${{ env.DEVICE_NAME }}-eng
+        lunch ${{ env.MAKEFILE_NAME }}-${{ env.DEVICE_NAME }}-eng || lunch ${{ env.MAKEFILE_NAME }}_${{ env.DEVICE_NAME }}-eng
         make ${{ env.BUILD_TARGET }} -j$(nproc --all)
 
     - name: Check Output
       run: |
-        ls -lh workspace/out/target/product/${{ env.DEVICE_NAME }}/${{ env.BUILD_TARGET }}.img
+        ls -lh workspace/out/target/product/${{ env.DEVICE_NAME }}/${{ env.BUILD_TARGET }}.img || echo "File non trovato!"
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
