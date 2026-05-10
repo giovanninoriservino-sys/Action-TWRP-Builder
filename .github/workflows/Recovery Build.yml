@@ -53,24 +53,29 @@ jobs:
 
     - name: Clone Device Tree
       run: |
-         cd workspace
-        # 1. Clona in una cartella temporanea esterna
-        git clone ${{ env.DEVICE_URL }} -b ${{ env.DEVICE_BRANCH }} /tmp/device_tree
+        cd workspace
         
-        # 2. Rimuovi la cartella di destinazione se esiste già per evitare doppioni
+        # 2. Puliamo via eventuali residui di vecchi tentativi falliti
+        rm -rf /tmp/device_tree
         rm -rf device/motorola/cancunf
         
-        # 3. Crea la struttura pulita
+        # 3. Cloniamo in una cartella esterna (così Git non si lamenta)
+        git clone ${{ env.DEVICE_URL }} -b ${{ env.DEVICE_BRANCH }} /tmp/device_tree
+        
+        # 4. Creiamo la cartella di destinazione corretta
         mkdir -p device/motorola/cancunf
         
-        # 4. Copia i file (gestisce sia se hai le cartelle nel repo sia se sono file sciolti)
+        # 5. Spostiamo i file al loro posto
+        # Controlliamo se nel tuo repo hai già la struttura device/motorola/cancunf o i file sciolti
         if [ -d "/tmp/device_tree/device/motorola/cancunf" ]; then
           cp -r /tmp/device_tree/device/motorola/cancunf/* device/motorola/cancunf/
         else
           cp -r /tmp/device_tree/* device/motorola/cancunf/
-       
-        # 5. Pulizia
+        fi
+        
+        # 6. Pulizia finale della cartella temporanea
         rm -rf /tmp/device_tree
+        
     - name: Build TWRP
       run: |
         cd workspace
