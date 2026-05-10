@@ -78,20 +78,25 @@ jobs:
         
     - name: Build TWRP
       run: |
-        cd workspace
-        source build/envsetup.sh
+        # --- OPERAZIONE PULIZIA TOTALE ---
+        # Cancella la riga maledetta da OGNI file dentro la cartella del device
+        find device/motorola/cancunf -type f -exec sed -i '/BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/d' {} +
+        find device/motorola/cancunf -type f -exec sed -i '/PRODUCT_BUILD_VENDOR_BOOT_IMAGE/d' {} +
         
-        # Esportiamo solo l'indispensabile
+        # Ora forziamo la variabile nel posto GIUSTO (il file di sistema)
+        # Questo dice ad Android: "Sì, sto costruendo una vendor_boot, fidati"
+        echo "PRODUCT_BUILD_VENDOR_BOOT_IMAGE := true" >> build/make/core/config.mk
+        
+        source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
         
-        # Pulizia preventiva dei file di configurazione che potremmo aver sporcato
-        # (Opzionale ma consigliato per un Rerun)
+        # Prova il lunch
+        lunch twrp_cancunf-eng || true
         
-        # Lanciamo il lunch. Se fallisce qui, il problema è il nome dei file nel repo.
-        lunch twrp_cancunf-eng
-        
-        # Usiamo -j1 o -j2 per non far morire la RAM (abbiamo 15.6GB, siamo al limite)
-        make vendor_bootimage -j2
+        # Lanciamo la build passando la variabile '902' direttamente nel comando
+        make vendor_bootimage \
+          BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true \
+          -j2
         
     - name: Check Output
       run: |
