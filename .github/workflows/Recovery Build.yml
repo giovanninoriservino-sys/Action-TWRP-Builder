@@ -58,11 +58,12 @@ jobs:
 
     - name: Build TWRP
       run: |
-        cd workspace
-        source build/envsetup.sh
-        export ALLOW_MISSING_DEPENDENCIES=true
-        lunch ${{ env.MAKEFILE_NAME }}-${{ env.DEVICE_NAME }}-eng || lunch ${{ env.MAKEFILE_NAME }}_${{ env.DEVICE_NAME }}-eng
-        make ${{ env.BUILD_TARGET }} -j$(nproc --all)
+       cd workspace
+       source build/envsetup.sh
+       export ALLOW_MISSING_DEPENDENCIES=true
+       # Forza il lunch direttamente sul file
+       lunch twrp_${{ env.DEVICE_NAME }}-eng
+       make ${{ env.BUILD_TARGET }} -j$(nproc --all)
 
     - name: Check Output
       run: |
