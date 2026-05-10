@@ -80,22 +80,19 @@ jobs:
       run: |
         cd workspace
         source build/envsetup.sh
-        
-        # Esportiamo tutto il possibile per convincere il sistema
         export ALLOW_MISSING_DEPENDENCIES=true
-        export PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true
+
+        # TRUCCO NUCLEARE: Forza la variabile nel core del sistema di build
+        sed -i 's/PRODUCT_BUILD_VENDOR_BOOT_IMAGE := false/PRODUCT_BUILD_VENDOR_BOOT_IMAGE := true/g' build/make/core/board_config.mk || true
         
-        # Proviamo il lunch, ma se fallisce andiamo avanti comunque (|| true)
+        # Prova il lunch, ma non fermarti se brontola
         lunch twrp_cancunf-eng || true
         
-        # Compiliamo passando i parametri critici direttamente al comando make
-        # Questo scavalca i controlli del BoardConfig all'avvio
+        # Compila forzando i parametri e usando meno RAM per sicurezza
         make vendor_bootimage \
-            PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true \
-            BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true \
-            TARGET_PRODUCT=twrp_cancunf \
-            TARGET_BUILD_VARIANT=eng \
-            -j$(nproc --all)
+          TARGET_PRODUCT=twrp_cancunf \
+          TARGET_BUILD_VARIANT=eng \
+          PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true \
         
     - name: Check Output
       run: |
