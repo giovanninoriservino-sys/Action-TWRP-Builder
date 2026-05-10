@@ -54,7 +54,8 @@ jobs:
     - name: Clone Device Tree
       run: |
         cd workspace
-        git clone ${{ env.DEVICE_URL }} -b ${{ env.DEVICE_BRANCH }} ${{ env.DEVICE_PATH }}
+        # Clona tutto nella root del workspace, così le cartelle combaciano
+        git clone ${{ env.DEVICE_URL }} -b ${{ env.DEVICE_BRANCH }} .
 
     - name: Build TWRP
       run: |
