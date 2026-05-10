@@ -81,18 +81,21 @@ jobs:
         cd workspace
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
-
-        # TRUCCO NUCLEARE: Forza la variabile nel core del sistema di build
-        sed -i 's/PRODUCT_BUILD_VENDOR_BOOT_IMAGE := false/PRODUCT_BUILD_VENDOR_BOOT_IMAGE := true/g' build/make/core/board_config.mk || true
         
-        # Prova il lunch, ma non fermarti se brontola
+        # Inseriamo forzatamente le variabili nel file di sistema PRIMA del lunch
+        echo "PRODUCT_BUILD_VENDOR_BOOT_IMAGE := true" >> build/make/core/config.mk
+        echo "BOARD_HAS_VENDOR_BOOT := true" >> build/make/core/config.mk
+        
+        # Proviamo il lunch, ignorando il fallimento
         lunch twrp_cancunf-eng || true
         
-        # Compila forzando i parametri e usando meno RAM per sicurezza
+        # Lanciamo la build passando tutto il peso al comando make
         make vendor_bootimage \
           TARGET_PRODUCT=twrp_cancunf \
           TARGET_BUILD_VARIANT=eng \
           PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true \
+          BOARD_HAS_VENDOR_BOOT=true \
+          -j2
         
     - name: Check Output
       run: |
