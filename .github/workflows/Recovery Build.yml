@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
+
 env:
   LIBRARY_NAME: twrp
   LIBRARY_URL: https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git
@@ -55,63 +56,38 @@ jobs:
     - name: Clone e Fix Matrioska
       run: |
         cd workspace
-        # 1. Pulizia totale preventiva
         rm -rf device/motorola/cancunf
         mkdir -p device/motorola/cancunf
-        
-        # 2. Cloniamo fuori dal percorso di build per non fare raddoppi
         git clone ${{ env.DEVICE_URL }} -b ${{ env.DEVICE_BRANCH }} /tmp/cancunf
-        
-        # 3. Cerchiamo dove sono i file. Se il tuo repo ha una cartella interna, la "saltiamo"
         if [ -d "/tmp/cancunf/device/motorola/cancunf" ]; then
           cp -r /tmp/cancunf/device/motorola/cancunf/* device/motorola/cancunf/
         else
           cp -r /tmp/cancunf/* device/motorola/cancunf/
         fi
-        
-        # 4. VERIFICA: Se vedi due AndroidProducts.mk qui, allora abbiamo fallito
-        find device/motorola/cancunf -name "twrp_cancunf.mk"
 
-      - name: Build TWRP
+    - name: Build TWRP
       run: |
         cd workspace
-        
-        # 1. IDENTIFICAZIONE FILE DI PRODOTTO
-        # Cerchiamo il file .mk principale (solitamente twrp_cancunf.mk o omni_cancunf.mk)
+        # 1. IDENTIFICAZIONE FILE
         PRODUCT_MK=$(find device/motorola/cancunf -name "twrp_cancunf.mk" -o -name "omni_cancunf.mk" | head -n 1)
         BOARD_MK="device/motorola/cancunf/BoardConfig.mk"
 
-        # 2. FIX RADICALE - INIEZIONE NEI FILE
-        # Puliamo prima i vecchi tentativi per evitare doppioni
-        sed -i '/PRODUCT_BUILD_VENDOR_BOOT_IMAGE/d' $PRODUCT_MK
-        sed -i '/BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/d' $BOARD_MK
-        sed -i '/BOARD_INCLUDE_RECOVERY_RAMDISK_IN_VENDOR_BOOT/d' $BOARD_MK
-
-        # Iniettiamo le variabili nel PRODUCT_MK (fondamentale per il lunch)
+        # 2. FIX RADICALE
+        sed -i '/PRODUCT_BUILD_VENDOR_BOOT_IMAGE/d' $PRODUCT_MK || true
+        sed -i '/BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/d' $BOARD_MK || true
         echo "PRODUCT_BUILD_VENDOR_BOOT_IMAGE := true" >> $PRODUCT_MK
-        
-        # Iniettiamo le variabili nel BOARD_MK
         echo "BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT := true" >> $BOARD_MK
-        echo "BOARD_INCLUDE_RECOVERY_RAMDISK_IN_VENDOR_BOOT := true" >> $BOARD_MK
 
-        # 3. SETUP AMBIENTE
+        # 3. SETUP E LUNCH
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
+        lunch twrp_cancunf-eng || true
         
-        # 4. LUNCH
-        # Adesso il lunch DOVREBBE vedere che PRODUCT_BUILD_VENDOR_BOOT_IMAGE è true
-        lunch twrp_cancunf-eng || lunch omni_cancunf-eng || true
-        
-        # 5. MAKE FINALE
-        make vendor_bootimage -j$(nproc --all) \
-            PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true \
-            BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true \
-            BOARD_INCLUDE_RECOVERY_RAMDISK_IN_VENDOR_BOOT=true
+        # 4. MAKE (usiamo -j4 invece di nproc per non saturare la RAM)
+        make vendor_bootimage -j4
 
-            
     - name: Upload Recovery
       uses: actions/upload-artifact@v4
       with:
-        name: TWRP-Cancunf-$(date +%Y%m%d)
+        name: TWRP-Cancunf
         path: workspace/out/target/product/cancunf/vendor_boot.img
-        
