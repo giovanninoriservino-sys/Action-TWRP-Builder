@@ -55,71 +55,31 @@ jobs:
       run: |
         cd workspace
         rm -rf device/motorola/cancunf
-        git clone ${{ env.DEVICE_URL }} -b $           {{ env.DEVICE_BRANCH }} device/motorola/ cancunf
+        # CORRETTO: Tutto su una riga e senza spazi nel dollaro
+        git clone ${{ env.DEVICE_URL }} -b ${{ env.DEVICE_BRANCH }} device/motorola/cancunf
 
     - name: Build TWRP
       run: |
         cd workspace
         
-        # 1. PULIZIA RADICALE (ora che non ci sono doppie cartelle)
-        # Eliminiamo la riga incriminata ovunque sia rimasta nel device tree
+        # 1. FIX ERRORE 902
         find device/motorola/cancunf -name "*.mk" -exec sed -i '/BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/d' {} +
         find device/motorola/cancunf -name "*.mk" -exec sed -i '/PRODUCT_BUILD_VENDOR_BOOT_IMAGE/d' {} +
 
-        # 2. PREPARAZIONE AMBIENTE
+        # 2. PREPARAZIONE E FORZATURA
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
-        
-        # 3. FORZATURA GLOBALE
-        # Iniettiamo la variabile nel cuore di Android per sbloccare il controllo 902
         echo "PRODUCT_BUILD_VENDOR_BOOT_IMAGE := true" >> build/make/core/config.mk
         
-        # 4. LUNCH (ora non sarà più ambiguo)
-        lunch twrp_cancunf-eng || true
-        
-        # 5. BUILD
-        make vendor_bootimage \
+        # 3. LUNCH E MAKE
+        lunch ${{ env.MAKEFILE_NAME }}-eng || true
+        make ${{ env.BUILD_TARGET }} -j2 \
             PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true \
-            BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true \
-            -j2
+            BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true
 
-        
-    - name: Build TWRP
-      run: |
-        
-        # Entriamo nella cartella principale
-         cd workspace
-        
-        # --- FIX PERCORSI E PULIZIA ---
-        # Cerchiamo dove diavolo è finito il device tree e puliamo i file .mk
-        # Usiamo 'find .' così lo trova ovunque sia stato clonato
-        find device/motorola/cancunf -name "*.mk" -exec sed -i '/BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/d' {} + || true
-        find device/motorola/cancunf -name "*.mk" -exec sed -i '/PRODUCT_BUILD_VENDOR_BOOT_IMAGE/d' {} + || true
-
-        # --- PREPARAZIONE AMBIENTE ---
-        source build/envsetup.sh
-        export ALLOW_MISSING_DEPENDENCIES=true
-        
-        # Forza la variabile globale nel core di Android per evitare l'errore 902
-        echo "PRODUCT_BUILD_VENDOR_BOOT_IMAGE := true" >> build/make/core/config.mk
-        
-        # --- LUNCH ---
-        # Il lunch deve trovare 'twrp_cancunf'. Se fallisce, usiamo '|| true' per non stoppare
-        lunch twrp_cancunf-eng || true
-        
-        # --- COMPILAZIONE ---
-        # Forziamo i parametri direttamente nel comando make
-        make vendor_bootimage \
-            PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true \
-            BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true \
-            -j2
-        
-    - name: Check Output
-      run: |
-        ls -lh workspace/out/target/product/${{ env.DEVICE_NAME }}/${{ env.BUILD_TARGET }}.img || echo "File non trovato!"
-
-    - name: Upload Artifact
+    - name: Upload Recovery
       uses: actions/upload-artifact@v4
       with:
-        name: TWRP-VendorBoot-${{ env.DEVICE_NAME }}
-        path: workspace/out/target/product/${{ env.DEVICE_NAME }}/${{ env.BUILD_TARGET }}.img
+        name: TWRP-Cancunf-$(date +%Y%m%d)
+        path: workspace/out/target/product/cancunf/vendor_boot.img
+        
