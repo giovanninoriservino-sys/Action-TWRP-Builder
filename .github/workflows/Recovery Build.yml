@@ -100,8 +100,8 @@ jobs:
             BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true \
             -j2
 
-    - name: Upload Recovery
-      uses: actions/upload-artifact@v4
-      with:
-        name: TWRP-Cancunf
-        path: workspace/out/target/product/cancunf/vendor_boot.img
+        - name: Upload Recovery
+        uses: actions/upload-artifact@v4
+        with:
+         name: TWRP-Cancunf
+         path: workspace/out/target/product/cancunf/vendor_boot.img
