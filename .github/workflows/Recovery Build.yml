@@ -55,7 +55,7 @@ jobs:
       run: |
         cd workspace
         rm -rf device/motorola/cancunf
-        git clone ${{ env.DEVICE_URL }} -b $           {{ env.DEVICE_BRANCH }} device/motorola/      cancunf
+        git clone ${{ env.DEVICE_URL }} -b $           {{ env.DEVICE_BRANCH }} device/motorola/ cancunf
 
     - name: Build TWRP
       run: |
