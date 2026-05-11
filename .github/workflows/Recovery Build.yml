@@ -75,33 +75,31 @@ jobs:
       run: |
         cd workspace
         
-        # 1. PULIZIA TOTALE DEI CONFLITTI
-        # Rimuoviamo le tre variabili che litigano tra loro nei file del device tree
-        find device/motorola/cancunf -name "*.mk" -exec sed -i '/BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/d' {} +
-        find device/motorola/cancunf -name "*.mk" -exec sed -i '/PRODUCT_BUILD_VENDOR_BOOT_IMAGE/d' {} +
-        find device/motorola/cancunf -name "*.mk" -exec sed -i '/BOARD_INCLUDE_RECOVERY_RAMDISK_IN_VENDOR_BOOT/d' {} +
+        # 1. PULIZIA E FIX INTELLIGENTE
+        # Invece di cancellare tutto, forziamo i valori corretti nei file .mk del TUO device
+        # Questo evita il conflitto "Should not set... if not building vendor_boot"
+        find device/motorola/cancunf -name "*.mk" -exec sed -i 's/PRODUCT_BUILD_VENDOR_BOOT_IMAGE := false/PRODUCT_BUILD_VENDOR_BOOT_IMAGE := true/g' {} +
+        find device/motorola/cancunf -name "*.mk" -exec sed -i 's/BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT := true/BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT := true/g' {} +
+        
+        # Se le righe non esistono, le aggiungiamo in fondo al BoardConfig.mk correttamente
+        echo "BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT := true" >> device/motorola/cancunf/BoardConfig.mk
+        echo "BOARD_INCLUDE_RECOVERY_RAMDISK_IN_VENDOR_BOOT := true" >> device/motorola/cancunf/BoardConfig.mk
 
-        # 2. PREPARAZIONE AMBIENTE
+        # 2. PREPARAZIONE AMBIENTE (Niente più echo in build/make/core!)
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
         
-        # 3. FORZATURA CORE
-        # Iniettiamo la variabile madre nel core per bypassare il controllo 902
-        echo "PRODUCT_BUILD_VENDOR_BOOT_IMAGE := true" >> build/make/core/config.mk
+        # 3. LUNCH
+        # Se fallisce twrp_cancunf, usiamo il comando completo
+        lunch twrp_cancunf-eng || lunch omni_cancunf-eng || true
         
-        # 4. LUNCH
-        # Se twrp_cancunf fallisce, non preoccuparti del messaggio "Device not found", 
-        # il comando 'make' sotto proverà a forzare i parametri.
-        lunch twrp_cancunf-eng || true
-        
-        # 5. MAKE FINALE (FORZA TUTTO QUI)
-        # Passiamo tutte le variabili necessarie direttamente al compilatore
+        # 4. MAKE FINALE
+        # Passiamo le variabili come parametri esterni (questo non è readonly)
         make vendor_bootimage -j2 \
             PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true \
             BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true \
             BOARD_INCLUDE_RECOVERY_RAMDISK_IN_VENDOR_BOOT=true
             
-
     - name: Upload Recovery
       uses: actions/upload-artifact@v4
       with:
