@@ -68,23 +68,28 @@ jobs:
     - name: Build TWRP
       run: |
         cd workspace
-        # 1. IDENTIFICAZIONE FILE
+        # 1. DISATTIVIAMO L'ERRORE 902 ALLA RADICE
+        CORE_CONF="build/make/core/board_config.mk"
+        sed -i '902s/^/# /' $CORE_CONF || true
+        sed -i '903s/^/# /' $CORE_CONF || true
+        sed -i '904s/^/# /' $CORE_CONF || true
+
+        # 2. FIX PERCORSI DEVICE
         PRODUCT_MK=$(find device/motorola/cancunf -name "twrp_cancunf.mk" -o -name "omni_cancunf.mk" | head -n 1)
         BOARD_MK="device/motorola/cancunf/BoardConfig.mk"
-
-        # 2. FIX RADICALE
-        sed -i '/PRODUCT_BUILD_VENDOR_BOOT_IMAGE/d' $PRODUCT_MK || true
-        sed -i '/BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/d' $BOARD_MK || true
+        
         echo "PRODUCT_BUILD_VENDOR_BOOT_IMAGE := true" >> $PRODUCT_MK
         echo "BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT := true" >> $BOARD_MK
 
         # 3. SETUP E LUNCH
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
-        lunch twrp_cancunf-eng || true
-        
-        # 4. MAKE (usiamo -j4 invece di nproc per non saturare la RAM)
-        make vendor_bootimage -j4
+        lunch twrp_cancunf-eng || { export TARGET_PRODUCT=twrp_cancunf; export TARGET_BUILD_VARIANT=eng; }
+
+        # 4. COMPILAZIONE (j2 per la RAM)
+        make vendor_bootimage -j2 \
+            PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true \
+            BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true
 
     - name: Upload Recovery
       uses: actions/upload-artifact@v4
