@@ -54,17 +54,37 @@ jobs:
     - name: Clone Device Tree
       run: |
         cd workspace
-        # 1. Creiamo la struttura cartelle esatta
-        mkdir -p device/motorola/cancunf
+        # Rimuoviamo qualsiasi sporcizia precedente
+        rm -rf device/motorola/cancunf
+        # Cloniamo direttamente nel percorso GIUSTO                senza creare doppie cartelle
+        git clone ${{ env.DEVICE_URL }} -b $       {{ env.DEVICE_BRANCH }} device/motorola/cancunf
+
+    - name: Build TWRP
+      run: |
+        cd workspace
         
-        # 2. Cloniamo in una cartella temporanea
-        git clone ${{ env.DEVICE_URL }} -b ${{ env.DEVICE_BRANCH }} /tmp/temp_device
+        # 1. PULIZIA RADICALE (ora che non ci sono doppie cartelle)
+        # Eliminiamo la riga incriminata ovunque sia rimasta nel device tree
+        find device/motorola/cancunf -name "*.mk" -exec sed -i '/BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/d' {} +
+        find device/motorola/cancunf -name "*.mk" -exec sed -i '/PRODUCT_BUILD_VENDOR_BOOT_IMAGE/d' {} +
+
+        # 2. PREPARAZIONE AMBIENTE
+        source build/envsetup.sh
+        export ALLOW_MISSING_DEPENDENCIES=true
         
-        # 3. Copiamo i file dentro la cartella creata al punto 1
-        cp -r /tmp/temp_device/* device/motorola/cancunf/
+        # 3. FORZATURA GLOBALE
+        # Iniettiamo la variabile nel cuore di Android per sbloccare il controllo 902
+        echo "PRODUCT_BUILD_VENDOR_BOOT_IMAGE := true" >> build/make/core/config.mk
         
-        # 4. Verifica (per vedere nel log se ora ci sono)
-        ls -R device/motorola/cancunf
+        # 4. LUNCH (ora non sarà più ambiguo)
+        lunch twrp_cancunf-eng || true
+        
+        # 5. BUILD
+        make vendor_bootimage \
+            PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true \
+            BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true \
+            -j2
+
         
     - name: Build TWRP
       run: |
