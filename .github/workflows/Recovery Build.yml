@@ -54,22 +54,42 @@ jobs:
     - name: Clone Device Tree
       run: |
         cd workspace
+        # 1. ELIMINIAMO TUTTO IL VECCHIO (PULIZIA TOTALE)
         rm -rf device/motorola/cancunf
-        # CORRETTO: Tutto su una riga e senza spazi nel dollaro
-        git clone ${{ env.DEVICE_URL }} -b ${{ env.DEVICE_BRANCH }} device/motorola/cancunf
+        
+        # 2. CLONIAMO IN UNA CARTELLA TEMPORANEA
+        git clone ${{ env.DEVICE_URL }} -b ${{ env.DEVICE_BRANCH }} /tmp/android_device_motorola_cancunf
+        
+        # 3. CREIAMO IL PERCORSO CORRETTO E COPIAMO SOLO I FILE (Niente più matrioska!)
+        mkdir -p device/motorola/cancunf
+        cp -r /tmp/android_device_motorola_cancunf/* device/motorola/cancunf/
+        
+        # Verifica visiva per te nel log
+        ls -R device/motorola/cancunf | head -n 20
 
     - name: Build TWRP
       run: |
         cd workspace
         
-        # 1. FIX ERRORE 902
+        # 1. FIX ERRORE 902 (PULIZIA RADICALE SUL PERCORSO PULITO)
         find device/motorola/cancunf -name "*.mk" -exec sed -i '/BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/d' {} +
         find device/motorola/cancunf -name "*.mk" -exec sed -i '/PRODUCT_BUILD_VENDOR_BOOT_IMAGE/d' {} +
 
-        # 2. PREPARAZIONE E FORZATURA
+        # 2. PREPARAZIONE AMBIENTE
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
+        
+        # 3. FORZATURA CORE (L'echo deve essere fatto su una riga pulita)
         echo "PRODUCT_BUILD_VENDOR_BOOT_IMAGE := true" >> build/make/core/config.mk
+        
+        # 4. LUNCH E MAKE
+        # Usiamo il percorso completo per il lunch se necessario
+        lunch twrp_cancunf-eng || { echo "Lunch fallito, provo a forzare..."; lunch omni_cancunf-eng || true; }
+        
+        make vendor_bootimage -j2 \
+            PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true \
+            BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true
+
         
         # 3. LUNCH E MAKE
         lunch ${{ env.MAKEFILE_NAME }}-eng || true
