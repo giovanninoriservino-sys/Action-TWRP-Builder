@@ -14,7 +14,7 @@ env:
   DEVICE_PATH: device/motorola/cancunf
   DEVICE_NAME: cancunf
   MAKEFILE_NAME: twrp_cancunf
-  BUILD_TARGET: vendor_bootimage
+  BUILD_TARGET: vendorbootimage
 
 jobs:
   build:
