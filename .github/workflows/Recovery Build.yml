@@ -2,6 +2,8 @@ name: Recovery Build
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
 env:
   LIBRARY_NAME: twrp
   LIBRARY_URL: https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git
