@@ -51,51 +51,47 @@ jobs:
         cd workspace
         repo sync -j$(nproc --all) --force-sync --no-tags --no-clone-bundle
 
-    - name: Clone Device Tree
+    - name: Clone e Fix Matrioska
       run: |
         cd workspace
-        # 1. ELIMINIAMO TUTTO IL VECCHIO (PULIZIA TOTALE)
+        # 1. Pulizia totale preventiva
         rm -rf device/motorola/cancunf
-        
-        # 2. CLONIAMO IN UNA CARTELLA TEMPORANEA
-        git clone ${{ env.DEVICE_URL }} -b ${{ env.DEVICE_BRANCH }} /tmp/android_device_motorola_cancunf
-        
-        # 3. CREIAMO IL PERCORSO CORRETTO E COPIAMO SOLO I FILE (Niente più matrioska!)
         mkdir -p device/motorola/cancunf
-        cp -r /tmp/android_device_motorola_cancunf/* device/motorola/cancunf/
         
-        # Verifica visiva per te nel log
-        ls -R device/motorola/cancunf | head -n 20
+        # 2. Cloniamo fuori dal percorso di build per non fare raddoppi
+        git clone ${{ env.DEVICE_URL }} -b ${{ env.DEVICE_BRANCH }} /tmp/cancunf
+        
+        # 3. Cerchiamo dove sono i file. Se il tuo repo ha una cartella interna, la "saltiamo"
+        if [ -d "/tmp/cancunf/device/motorola/cancunf" ]; then
+          cp -r /tmp/cancunf/device/motorola/cancunf/* device/motorola/cancunf/
+        else
+          cp -r /tmp/cancunf/* device/motorola/cancunf/
+        fi
+        
+        # 4. VERIFICA: Se vedi due AndroidProducts.mk qui, allora abbiamo fallito
+        find device/motorola/cancunf -name "twrp_cancunf.mk"
 
     - name: Build TWRP
       run: |
         cd workspace
         
-        # 1. FIX ERRORE 902 (PULIZIA RADICALE SUL PERCORSO PULITO)
+        # FIX 902: Puliamo OGNI file .mk trovato (anche nelle sottocartelle)
         find device/motorola/cancunf -name "*.mk" -exec sed -i '/BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/d' {} +
         find device/motorola/cancunf -name "*.mk" -exec sed -i '/PRODUCT_BUILD_VENDOR_BOOT_IMAGE/d' {} +
 
-        # 2. PREPARAZIONE AMBIENTE
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
         
-        # 3. FORZATURA CORE (L'echo deve essere fatto su una riga pulita)
+        # Forza la variabile nel core per Android 16
         echo "PRODUCT_BUILD_VENDOR_BOOT_IMAGE := true" >> build/make/core/config.mk
         
-        # 4. LUNCH E MAKE
-        # Usiamo il percorso completo per il lunch se necessario
-        lunch twrp_cancunf-eng || { echo "Lunch fallito, provo a forzare..."; lunch omni_cancunf-eng || true; }
+        # LUNCH (Usa il nome corretto del makefile senza 'twrp_')
+        lunch twrp_cancunf-eng || lunch omni_cancunf-eng || true
         
         make vendor_bootimage -j2 \
             PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true \
             BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true
-
-        
-        # 3. LUNCH E MAKE
-        lunch ${{ env.MAKEFILE_NAME }}-eng || true
-        make ${{ env.BUILD_TARGET }} -j2 \
-            PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true \
-            BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true
+            
 
     - name: Upload Recovery
       uses: actions/upload-artifact@v4
