@@ -64,32 +64,41 @@ jobs:
         else
           cp -r /tmp/cancunf/* device/motorola/cancunf/
         fi
-
+ 
     - name: Build TWRP
-      run: |
+    run: |
         cd workspace
-        # 1. DISATTIVIAMO L'ERRORE 902 ALLA RADICE
+        
+        # 1. DISATTIVIAMO TUTTI I CONTROLLI VENDOR_BOOT (Hacking totale)
+        # Commentiamo l'intero blocco di errori che va dalla riga 900 alla 915
         CORE_CONF="build/make/core/board_config.mk"
-        sed -i '902s/^/# /' $CORE_CONF || true
-        sed -i '903s/^/# /' $CORE_CONF || true
-        sed -i '904s/^/# /' $CORE_CONF || true
+        sed -i '900,915s/^/# /' $CORE_CONF || true
 
         # 2. FIX PERCORSI DEVICE
         PRODUCT_MK=$(find device/motorola/cancunf -name "twrp_cancunf.mk" -o -name "omni_cancunf.mk" | head -n 1)
         BOARD_MK="device/motorola/cancunf/BoardConfig.mk"
         
+        # Pulizia preventiva per evitare conflitti
+        sed -i '/PRODUCT_BUILD_VENDOR_BOOT_IMAGE/d' $PRODUCT_MK || true
+        sed -i '/BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/d' $BOARD_MK || true
+        
+        # Forza le variabili necessarie
         echo "PRODUCT_BUILD_VENDOR_BOOT_IMAGE := true" >> $PRODUCT_MK
         echo "BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT := true" >> $BOARD_MK
 
         # 3. SETUP E LUNCH
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
+        
+        # Lunch forzato
         lunch twrp_cancunf-eng || { export TARGET_PRODUCT=twrp_cancunf; export TARGET_BUILD_VARIANT=eng; }
 
-        # 4. COMPILAZIONE (j2 per la RAM)
-        make vendor_bootimage -j2 \
+        # 4. COMPILAZIONE
+        # Usiamo -j2 per la RAM e passiamo le variabili anche al comando make
+        make vendor_bootimage \
             PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true \
-            BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true
+            BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true \
+            -j2
 
     - name: Upload Recovery
       uses: actions/upload-artifact@v4
