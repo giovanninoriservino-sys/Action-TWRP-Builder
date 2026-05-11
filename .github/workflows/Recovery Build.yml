@@ -54,10 +54,8 @@ jobs:
     - name: Clone Device Tree
       run: |
         cd workspace
-        # Rimuoviamo qualsiasi sporcizia precedente
         rm -rf device/motorola/cancunf
-        # Cloniamo direttamente nel percorso GIUSTO                senza creare doppie cartelle
-        git clone ${{ env.DEVICE_URL }} -b $       {{ env.DEVICE_BRANCH }} device/motorola/cancunf
+        git clone ${{ env.DEVICE_URL }} -b $           {{ env.DEVICE_BRANCH }} device/motorola/cancunf
 
     - name: Build TWRP
       run: |
