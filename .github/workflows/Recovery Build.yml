@@ -75,22 +75,31 @@ jobs:
       run: |
         cd workspace
         
-        # FIX 902: Puliamo OGNI file .mk trovato (anche nelle sottocartelle)
+        # 1. PULIZIA TOTALE DEI CONFLITTI
+        # Rimuoviamo le tre variabili che litigano tra loro nei file del device tree
         find device/motorola/cancunf -name "*.mk" -exec sed -i '/BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/d' {} +
         find device/motorola/cancunf -name "*.mk" -exec sed -i '/PRODUCT_BUILD_VENDOR_BOOT_IMAGE/d' {} +
+        find device/motorola/cancunf -name "*.mk" -exec sed -i '/BOARD_INCLUDE_RECOVERY_RAMDISK_IN_VENDOR_BOOT/d' {} +
 
+        # 2. PREPARAZIONE AMBIENTE
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
         
-        # Forza la variabile nel core per Android 16
+        # 3. FORZATURA CORE
+        # Iniettiamo la variabile madre nel core per bypassare il controllo 902
         echo "PRODUCT_BUILD_VENDOR_BOOT_IMAGE := true" >> build/make/core/config.mk
         
-        # LUNCH (Usa il nome corretto del makefile senza 'twrp_')
-        lunch twrp_cancunf-eng || lunch omni_cancunf-eng || true
+        # 4. LUNCH
+        # Se twrp_cancunf fallisce, non preoccuparti del messaggio "Device not found", 
+        # il comando 'make' sotto proverà a forzare i parametri.
+        lunch twrp_cancunf-eng || true
         
+        # 5. MAKE FINALE (FORZA TUTTO QUI)
+        # Passiamo tutte le variabili necessarie direttamente al compilatore
         make vendor_bootimage -j2 \
             PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true \
-            BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true
+            BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true \
+            BOARD_INCLUDE_RECOVERY_RAMDISK_IN_VENDOR_BOOT=true
             
 
     - name: Upload Recovery
