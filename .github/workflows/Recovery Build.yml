@@ -111,4 +111,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
          name: TWRP-Cancunf
-         path: workspace/out/target/product/cancunf/vendor_boot.img
+         path: workspace/out/target/product/cancunf/vendorbootimage.img
