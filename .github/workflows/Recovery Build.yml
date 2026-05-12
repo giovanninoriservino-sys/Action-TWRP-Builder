@@ -69,28 +69,31 @@ jobs:
       run: |
         cd workspace
         
-        # 1. BYPASS (Indispensabili)
+        # 1. BYPASS (902 e 905)
         sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/$(warning Bypassed 902/g' build/make/core/board_config.mk
         sed -i 's/$(error Should not set BOARD_VENDOR_RAMDISK_FRAGMENTS/$(warning Bypassed 905/g' build/make/core/board_config.mk
 
         # 2. SETUP AMBIENTE
         source build/envsetup.sh
+        
+        # 3. FORZATURA VARIABILI (Le iniettiamo a mano)
         export ALLOW_MISSING_DEPENDENCIES=true
-        
-        # 3. LUNCH
-        lunch twrp_cancunf-eng || { export TARGET_PRODUCT=twrp_cancunf; export TARGET_BUILD_VARIANT=eng; export TARGET_DEVICE=cancunf; }
+        export TARGET_PRODUCT=twrp_cancunf
+        export TARGET_BUILD_VARIANT=eng
+        export LC_ALL=C
 
-        # 4. IL "CANCELLA E COSTRUISCI" DEFINITIVO
-        # Cancelliamo specificamente i file che bloccano Ninja
-        rm -rf out/target/product/cancunf/recovery
-        rm -rf out/target/product/cancunf/root
-        
-        # Proviamo il target generico 'recoveryimage' che su Android 12 
-        # spesso innesca la creazione della vendor_boot automaticamente
-        mka recoveryimage -j$(nproc) \
+        # 4. PULIZIA MANUALE DELLE CACHE DI NINJA
+        rm -rf out/combined-*.ninja out/build-*.ninja out/target/product/cancunf
+
+        # 5. ESECUZIONE FORZATA
+        # Usiamo il comando 'm' ma gli passiamo TUTTI i parametri sulla riga di comando
+        # Questo impedisce a Ninja di dire "no work to do" perché gli stiamo dando ordini espliciti
+        m vendorbootimage \
+            -j$(nproc) \
+            TARGET_PRODUCT=twrp_cancunf \
+            TARGET_BUILD_VARIANT=eng \
             PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true \
-            BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true \
-            BOARD_HAS_NO_RECOVERY=true
+            BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true
 
 
     - name: Debug Path
