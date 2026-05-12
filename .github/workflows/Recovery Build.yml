@@ -98,11 +98,10 @@ jobs:
         # Cancelliamo la cartella di output specifica del device per sicurezza
         rm -rf out/target/product/cancunf/obj/PACKAGING/vendor_boot_intermediates
         
-        # 5. ESECUZIONE (Target multipli per non lasciare scampo a Ninja)
-        # Chiediamo sia recoveryimage che vendorbootimage esplicitamente
-        m vendorbootimage recoveryimage -j2 \
-            BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true \
-            PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true
+        m adbd twrp recoveryimage vendorbootimage -j2 \
+        BOARD_USES_RECOVERY_AS_BOOT=false \
+        BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true \
+        PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true
 
     - name: Debug Path
       run: |
