@@ -65,6 +65,17 @@ jobs:
           cp -r /tmp/cancunf/* device/motorola/cancunf/
         fi
  
+    - name: Ispezione Sorgenti Device
+      run: |
+        cd workspace/device/motorola/cancunf
+        echo "--- CONTENUTO CARTELLA DEVICE ---"
+        ls -F
+        echo "--- CONTENUTO AndroidProducts.mk ---"
+        cat AndroidProducts.mk
+        echo "--- VERIFICA ESISTENZA MAKEFILE ---"
+        ls twrp_cancunf.mk || echo "ERRORE: twrp_cancunf.mk NON TROVATO!"
+
+
     - name: Build TWRP
       run: |
         cd workspace
