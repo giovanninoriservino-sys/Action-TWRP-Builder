@@ -68,45 +68,24 @@ jobs:
     - name: Build TWRP
       run: |
         cd workspace
-        
-        # 1. DISATTIVIAMO I CONTROLLI (Sostituzione chirurgica)
-        # Invece di commentare, forziamo il sistema a credere che stiamo costruendo vendor_boot
+        # 1. BYPASS CONTROLLI
         CORE_CONF="build/make/core/board_config.mk"
-        # Questo comando cerca il check del vendor_boot e lo "addolcisce"
         sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/$(warning Bypassed 902/g' $CORE_CONF
         sed -i 's/$(error Should not set BOARD_VENDOR_RAMDISK_FRAGMENTS/$(warning Bypassed 905/g' $CORE_CONF
 
-        # 2. FIX PERCORSI DEVICE
-        PRODUCT_MK=$(find device/motorola/cancunf -name "twrp_cancunf.mk" -o -name "omni_cancunf.mk" | head -n 1)
-        BOARD_MK="device/motorola/cancunf/BoardConfig.mk"
-        
-        # Pulizia
-        sed -i '/PRODUCT_BUILD_VENDOR_BOOT_IMAGE/d' $PRODUCT_MK || true
-        sed -i '/BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/d' $BOARD_MK || true
-        
-        # Iniezione variabili necessarie
-        echo "PRODUCT_BUILD_VENDOR_BOOT_IMAGE := true" >> $PRODUCT_MK
-        echo "BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT := true" >> $BOARD_MK
-
-        # 3. SETUP E LUNCH
+        # 2. SETUP E LUNCH
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
-        
-        # Se il lunch fallisce, non fermarti, forza le variabili di ambiente
-        lunch twrp_cancunf-eng || { 
-          echo "Lunch fallito, forzo configurazione manuale..."
-          export TARGET_PRODUCT=twrp_cancunf
-          export TARGET_BUILD_VARIANT=eng
-          export TARGET_DEVICE=cancunf
-        }
+        lunch twrp_cancunf-eng || { export TARGET_PRODUCT=twrp_cancunf; export TARGET_BUILD_VARIANT=eng; export TARGET_DEVICE=cancunf; }
 
-        # 4. COMPILAZIONE
-        make vendorbootimage -j2 PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true || \
-        make vendor_bootimage -j2 PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true || \
-        make recoveryimage -j2
+        # 3. MAKE (Abbiamo visto che il nome giusto è vendorbootimage)
+        make vendorbootimage -j2 PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true
 
-        - name: Upload Recovery
-        uses: actions/upload-artifact@v4
-        with:
-         name: TWRP-Cancunf
-         path: workspace/out/target/product/cancunf/vendorbootimage.img
+    - name: Upload Recovery
+      uses: actions/upload-artifact@v4
+      with:
+        name: TWRP-Cancunf
+        path: |
+          workspace/out/target/product/cancunf/vendor_boot.img
+          workspace/out/target/product/cancunf/vendorboot.img
+          workspace/out/target/product/cancunf/*.img
