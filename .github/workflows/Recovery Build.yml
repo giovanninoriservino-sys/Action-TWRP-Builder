@@ -91,6 +91,10 @@ jobs:
             PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true \
             BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true
 
+    - name: Debug Path
+      run: |
+        cd workspace
+        ls -R out/target/product/cancunf/
 
 
     - name: Upload Recovery
