@@ -101,11 +101,9 @@ jobs:
         }
 
         # 4. COMPILAZIONE
-        # Usiamo -j2 per la RAM e forziamo le variabili nel comando make
-        make vendor_bootimage \
-            PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true \
-            BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true \
-            -j2
+        make vendorbootimage -j2 PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true || \
+        make vendor_bootimage -j2 PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true || \
+        make recoveryimage -j2
 
         - name: Upload Recovery
         uses: actions/upload-artifact@v4
