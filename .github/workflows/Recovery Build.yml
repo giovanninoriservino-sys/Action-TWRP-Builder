@@ -84,28 +84,29 @@ jobs:
         sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/$(warning Bypassed 902/g' build/make/core/board_config.mk
         sed -i 's/$(error Should not set BOARD_VENDOR_RAMDISK_FRAGMENTS/$(warning Bypassed 905/g' build/make/core/board_config.mk
 
-        # 2. SETUP AMBIENTE E LUNCH
+        # 2. SETUP AMBIENTE CON LIMITI RAM (Per evitare il crash dei 16GB)
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
         export LC_ALL=C
+        export _JAVA_OPTIONS="-Xmx4g"
+        export SOONG_UI_MEMORY_LIMIT=14000000000
         
-        # Proviamo il lunch standard: se non carica questo, Ninja non partirà mai
+        # Forza Ninja a ignorare gli errori di sandbox (nsjail)
+        export BUILD_BROKEN_NINJA_USES_ENV_VARS=true
+        
+        # 3. LUNCH
         lunch twrp_cancunf-eng
 
-        # 3. VERIFICA IDENTITÀ (Controlla i log dopo il lancio!)
-        echo "=== DEBUG: COSA VEDE IL SISTEMA ==="
-        echo "Device:" $(get_build_var TARGET_DEVICE)
-        echo "Path:" $(get_build_var TARGET_DEVICE_DIR)
-        echo "==================================="
-
-        # 4. PULIZIA TOTALE DELLE CACHE DI NINJA
-        # Rimuoviamo i file che dicono a Ninja "non c'è lavoro"
+        # 4. PULIZIA MANUALE DELLE CACHE "PIGRE"
+        # Cancelliamo i file che dicono a Ninja che ha già finito
         rm -rf out/.ninja_log out/.ninja_deps out/build-*.ninja
-        rm -rf out/target/product/cancunf
+        rm -rf out/target/product/cancunf/obj/PACKAGING
+        rm -rf out/target/product/cancunf/vendor_boot*
 
-        # 5. ESECUZIONE "SMART"
-        # Usiamo 'mka' (che forza il caricamento dei moduli) puntando a vendorbootimage
-        mka vendorbootimage -j$(nproc) \
+        # 5. ESECUZIONE FORZATA (-j2 per non saturare la RAM)
+        # Usiamo 'm' invece di 'mka' per passare le variabili direttamente al core
+        m vendorbootimage \
+            -j2 \
             TARGET_PRODUCT=twrp_cancunf \
             TARGET_BUILD_VARIANT=eng \
             PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true \
