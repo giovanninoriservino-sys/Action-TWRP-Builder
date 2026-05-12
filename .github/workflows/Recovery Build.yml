@@ -69,27 +69,29 @@ jobs:
       run: |
         cd workspace
         
-        # 1. BYPASS (Sempre attivi)
+        # 1. BYPASS (Indispensabili)
         sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/$(warning Bypassed 902/g' build/make/core/board_config.mk
         sed -i 's/$(error Should not set BOARD_VENDOR_RAMDISK_FRAGMENTS/$(warning Bypassed 905/g' build/make/core/board_config.mk
 
-        # 2. SETUP
+        # 2. SETUP AMBIENTE
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
         
         # 3. LUNCH
         lunch twrp_cancunf-eng || { export TARGET_PRODUCT=twrp_cancunf; export TARGET_BUILD_VARIANT=eng; export TARGET_DEVICE=cancunf; }
 
-        # 4. IL TRUCCO: TOCCHIAMO I FILE PER RENDERLI "NUOVI"
-        # Usiamo 'touch' su un file del tuo device tree. 
-        # Questo costringe Ninja a pensare: "Oh, qualcosa è cambiato, devo ricompilare!"
-        touch device/motorola/cancunf/BoardConfig.mk
+        # 4. IL "CANCELLA E COSTRUISCI" DEFINITIVO
+        # Cancelliamo specificamente i file che bloccano Ninja
+        rm -rf out/target/product/cancunf/recovery
+        rm -rf out/target/product/cancunf/root
         
-        # 5. ESECUZIONE CON RE-GENERAZIONE
-        # Usiamo 'mka' ma con l'istruzione di ignorare quello che pensa di sapere
-        mka vendorbootimage -j$(nproc) \
+        # Proviamo il target generico 'recoveryimage' che su Android 12 
+        # spesso innesca la creazione della vendor_boot automaticamente
+        mka recoveryimage -j$(nproc) \
             PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true \
-            BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true
+            BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true \
+            BOARD_HAS_NO_RECOVERY=true
+
 
     - name: Debug Path
       run: |
