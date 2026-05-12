@@ -75,11 +75,11 @@ jobs:
         echo "--- VERIFICA ESISTENZA MAKEFILE ---"
         ls twrp_cancunf.mk || echo "ERRORE: twrp_cancunf.mk NON TROVATO!"
 
-    - name: Build TWRP (Android 16 Protocol)
+    - name: Build TWRP (Forced A16 Execution)
       run: |
         cd workspace
         
-        # 1. BYPASS TOTALI
+        # 1. BYPASS E REGOLE BOARD
         sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/$(warning Bypassed/g' build/make/core/board_config.mk
         
         # 2. SETUP AMBIENTE
@@ -87,13 +87,20 @@ jobs:
         export ALLOW_MISSING_DEPENDENCIES=true
         export BUILD_BROKEN_VINTF_CHECK=true
         export BUILD_BROKEN_DUP_RULES=true
-        export _JAVA_OPTIONS="-Xmx4g"
         
         # 3. LUNCH
         lunch twrp_cancunf-eng
 
-        # 4. ESECUZIONE
-        mka recoveryimage -j2 \
+        # 4. IL "KILLER" DEL NO WORK TO DO
+        # Cancelliamo i database di Ninja. Questo lo COSTRINGE a ricalcolare tutto.
+        echo "=== RESETTING NINJA DATABASE ==="
+        rm -rf out/.ninja_log out/.ninja_deps out/build-*.ninja
+        # Cancelliamo la cartella di output specifica del device per sicurezza
+        rm -rf out/target/product/cancunf/obj/PACKAGING/vendor_boot_intermediates
+        
+        # 5. ESECUZIONE (Target multipli per non lasciare scampo a Ninja)
+        # Chiediamo sia recoveryimage che vendorbootimage esplicitamente
+        m vendorbootimage recoveryimage -j2 \
             BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true \
             PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true
 
