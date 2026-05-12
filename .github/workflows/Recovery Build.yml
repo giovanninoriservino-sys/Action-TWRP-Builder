@@ -67,25 +67,26 @@ jobs:
  
     - name: Build TWRP
       run: |
+        # Entra ed elimina fisicamente TUTTA la cartella out prima di iniziare
         cd workspace
+        echo "Distruzione cartella out per forzare Ninja..."
+        rm -rf out
         
-        # 1. DISATTIVA I BLOCCHI (Essenziale ad ogni avvio)
+        # 1. BYPASS OBBLIGATORI
         CORE_CONF="build/make/core/board_config.mk"
         sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/$(warning Bypassed 902/g' $CORE_CONF
         sed -i 's/$(error Should not set BOARD_VENDOR_RAMDISK_FRAGMENTS/$(warning Bypassed 905/g' $CORE_CONF
 
-        # 2. PULIZIA PROFONDA (Forza Ninja a lavorare)
-        # Cancelliamo la cartella out così non può dire "no work to do"
-        rm -rf out/target/product/cancunf/*
-        
-        # 3. SETUP E LUNCH
+        # 2. SETUP AMBIENTE
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
+        
+        # 3. LUNCH
         lunch twrp_cancunf-eng || { export TARGET_PRODUCT=twrp_cancunf; export TARGET_BUILD_VARIANT=eng; export TARGET_DEVICE=cancunf; }
 
-        # 4. COMPILAZIONE TOTALE
-        # Usiamo 'mka' invece di 'make' e puntiamo al target specifico
-        mka vendorbootimage -j2 \
+        # 4. COMPILAZIONE FORZATA
+        # Aggiungiamo 'vendorbootimage' direttamente al comando
+        mka $BUILD_TARGET -j$(nproc) \
             PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true \
             BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true
         
