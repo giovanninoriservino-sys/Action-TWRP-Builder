@@ -85,8 +85,8 @@ jobs:
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: TWRP-MotoG54
+        name: TWRP-MotoG54-Cancunf
         path: |
-          workspace/out/target/product/cancunf/vendor_boot.img
-          workspace/out/target/product/cancunf/vendorboot.img
-          workspace/out/target/product/cancunf/*.img
+          **/out/target/product/*/*.img
+          **/vendor_boot.img
+          **/vendorboot.img
