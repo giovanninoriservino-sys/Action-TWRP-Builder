@@ -84,23 +84,28 @@ jobs:
         sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/$(warning Bypassed 902/g' build/make/core/board_config.mk
         sed -i 's/$(error Should not set BOARD_VENDOR_RAMDISK_FRAGMENTS/$(warning Bypassed 905/g' build/make/core/board_config.mk
 
-        # 2. SETUP AMBIENTE
+        # 2. SETUP AMBIENTE E LUNCH
         source build/envsetup.sh
-        
-        # 3. FORZATURA VARIABILI (Le iniettiamo a mano)
         export ALLOW_MISSING_DEPENDENCIES=true
-        export TARGET_PRODUCT=twrp_cancunf
-        export TARGET_BUILD_VARIANT=eng
         export LC_ALL=C
+        
+        # Proviamo il lunch standard: se non carica questo, Ninja non partirà mai
+        lunch twrp_cancunf-eng
 
-        # 4. PULIZIA MANUALE DELLE CACHE DI NINJA
-        rm -rf out/combined-*.ninja out/build-*.ninja out/target/product/cancunf
+        # 3. VERIFICA IDENTITÀ (Controlla i log dopo il lancio!)
+        echo "=== DEBUG: COSA VEDE IL SISTEMA ==="
+        echo "Device:" $(get_build_var TARGET_DEVICE)
+        echo "Path:" $(get_build_var TARGET_DEVICE_DIR)
+        echo "==================================="
 
-        # 5. ESECUZIONE FORZATA
-        # Usiamo il comando 'm' ma gli passiamo TUTTI i parametri sulla riga di comando
-        # Questo impedisce a Ninja di dire "no work to do" perché gli stiamo dando ordini espliciti
-        m vendorbootimage \
-            -j$(nproc) \
+        # 4. PULIZIA TOTALE DELLE CACHE DI NINJA
+        # Rimuoviamo i file che dicono a Ninja "non c'è lavoro"
+        rm -rf out/.ninja_log out/.ninja_deps out/build-*.ninja
+        rm -rf out/target/product/cancunf
+
+        # 5. ESECUZIONE "SMART"
+        # Usiamo 'mka' (che forza il caricamento dei moduli) puntando a vendorbootimage
+        mka vendorbootimage -j$(nproc) \
             TARGET_PRODUCT=twrp_cancunf \
             TARGET_BUILD_VARIANT=eng \
             PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true \
