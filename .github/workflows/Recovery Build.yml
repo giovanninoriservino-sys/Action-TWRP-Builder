@@ -67,17 +67,12 @@ jobs:
  
     - name: Build TWRP
       run: |
-        # Entriamo nella cartella principale
         cd workspace
         
-        # 1. PULIZIA TOTALE E VIOLENTA
-        # Cancelliamo tutto ciò che potrebbe far pensare a Ninja di aver già finito
-        echo "Pulizia totale dei file di controllo..."
-        rm -rf out/
-        rm -rf .repo/local_manifests/  # Puliamo anche eventuali residui di manifest
+        # 1. PULIZIA (Senza distruggere tutto, solo l'indispensabile)
+        rm -rf out/target/product/cancunf/obj/KERNEL_OBJ
         
         # 2. APPLICA I BYPASS (902 e 905)
-        # Lo facciamo direttamente sul file sorgente
         sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/$(warning Bypassed 902/g' build/make/core/board_config.mk
         sed -i 's/$(error Should not set BOARD_VENDOR_RAMDISK_FRAGMENTS/$(warning Bypassed 905/g' build/make/core/board_config.mk
 
@@ -86,20 +81,17 @@ jobs:
         export ALLOW_MISSING_DEPENDENCIES=true
         
         # 4. LUNCH
-        # Se lunch fallisce, forziamo le variabili a mano
         lunch twrp_cancunf-eng || { 
           export TARGET_PRODUCT=twrp_cancunf; 
           export TARGET_BUILD_VARIANT=eng; 
           export TARGET_DEVICE=cancunf; 
         }
 
-        # 5. ESECUZIONE
-        # Usiamo 'make' invece di 'mka' per vedere meglio gli errori
-        # Aggiungiamo 'ONE_SHOT_MAKEFILE=' per forzare la rigenerazione
-        make vendorbootimage -j$(nproc) \
+        # 5. ESECUZIONE (Comando pulito per Android 12)
+        # Usiamo 'm' che è il comando universale moderno
+        m vendorbootimage -j$(nproc) \
             PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true \
-            BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true \
-            ONE_SHOT_MAKEFILE=
+            BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true
 
 
     - name: Upload Recovery
