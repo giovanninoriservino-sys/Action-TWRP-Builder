@@ -31,7 +31,7 @@ jobs:
     - name: Install Build Tools
       run: |
         sudo apt-get update
-        sudo apt-get install -y gperf gcc-multilib g++-multilib libc6-dev-i386 x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc unzip bc bison build-essential curl flex git gnupg gperf lib32readline-dev lib32z1-dev liblz4-tool libncurses-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev python3
+        sudo apt-get install -y gperf gcc-multilib g++-multilib libc6-dev-i386 x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc unzip bc bison build-essential curl flex git gnupg gperf lib32readline-dev lib32z1-dev liblz4-tool libncurses-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync micro schedtool squashfs-tools xsltproc zip zlib1g-dev python3
 
     - name: Install Repo
       run: |
@@ -64,7 +64,7 @@ jobs:
         else
           cp -r /tmp/cancunf/* device/motorola/cancunf/
         fi
- 
+
     - name: Ispezione Sorgenti Device
       run: |
         cd workspace/device/motorola/cancunf
@@ -75,12 +75,11 @@ jobs:
         echo "--- VERIFICA ESISTENZA MAKEFILE ---"
         ls twrp_cancunf.mk || echo "ERRORE: twrp_cancunf.mk NON TROVATO!"
 
-
     - name: Build TWRP (Android 16 Protocol)
       run: |
         cd workspace
         
-        # 1. BYPASS TOTALI (A16 richiede più permessi)
+        # 1. BYPASS TOTALI
         sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/$(warning Bypassed/g' build/make/core/board_config.mk
         
         # 2. SETUP AMBIENTE
@@ -88,29 +87,26 @@ jobs:
         export ALLOW_MISSING_DEPENDENCIES=true
         export BUILD_BROKEN_VINTF_CHECK=true
         export BUILD_BROKEN_DUP_RULES=true
+        export _JAVA_OPTIONS="-Xmx4g"
         
         # 3. LUNCH
         lunch twrp_cancunf-eng
 
-        # 4. IL TRUCCO PER ANDROID 16
-        # In A16, a volte 'vendorbootimage' è protetto. 
-        # Chiediamo di buildare il 'recoveryimage' ma forzando la destinazione vendor.
+        # 4. ESECUZIONE
         mka recoveryimage -j2 \
             BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true \
             PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true
 
-
-     - name: Debug Path
-       run: |
+    - name: Debug Path
+      run: |
         cd workspace
-        ls -R out/target/product/cancunf/
+        ls -R out/target/product/cancunf/ || echo "Cartella out ancora vuota"
 
-
-     - name: Upload Recovery
-       uses: actions/upload-artifact@v4
-       if: always()
-       with:
-         name: TWRP-MotoG54
-         path: |
-           workspace/out/target/product/cancunf/vendor_boot.img
-           workspace/out/target/product/cancunf/*.img
+    - name: Upload Recovery
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: TWRP-MotoG54
+        path: |
+          workspace/out/target/product/cancunf/vendor_boot.img
+          workspace/out/target/product/cancunf/*.img
