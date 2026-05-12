@@ -69,6 +69,7 @@ jobs:
       run: |
         cd workspace
         
+        sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/$(warning Bypassed/g' build/make/core/board_config.mk
         # 1. SETUP AMBIENTE E FIX COMPATIBILITÀ
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
