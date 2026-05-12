@@ -68,19 +68,25 @@ jobs:
     - name: Build TWRP
       run: |
         cd workspace
-        # 1. BYPASS CONTROLLI
+        # 1. BYPASS CONTROLLI (Sempre necessario)
         CORE_CONF="build/make/core/board_config.mk"
         sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/$(warning Bypassed 902/g' $CORE_CONF
         sed -i 's/$(error Should not set BOARD_VENDOR_RAMDISK_FRAGMENTS/$(warning Bypassed 905/g' $CORE_CONF
 
-        # 2. SETUP E LUNCH
+        # 2. SETUP AMBIENTE
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
+        
+        # Pulizia per forzare Ninja a ricreare i file da zero
+        make clean
+
+        # 3. LUNCH
         lunch twrp_cancunf-eng || { export TARGET_PRODUCT=twrp_cancunf; export TARGET_BUILD_VARIANT=eng; export TARGET_DEVICE=cancunf; }
 
-        # 3. MAKE (Abbiamo visto che il nome giusto è vendorbootimage)
-        make vendorbootimage -j2 PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true
-
+        # 4. COMPILAZIONE TOTALE
+        # Usiamo 'mka' che è più potente e compila tutto il necessario per la vendor_boot
+        mka vendorbootimage -j2 PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true
+        
     - name: Localizza i file (Detective Mode)
       run: |
         echo "--- Elenco di tutti i file .img trovati ---"
@@ -92,8 +98,7 @@ jobs:
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: TWRP-MotoG54-DEBUG
+        name: TWRP-MotoG54
         path: |
-          out/target/product/cancunf/*.img
+          workspace/out/target/product/cancunf/vendor_boot.img
           workspace/out/target/product/cancunf/*.img
-          /home/runner/work/**/*.img
