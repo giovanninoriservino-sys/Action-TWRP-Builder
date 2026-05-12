@@ -76,54 +76,41 @@ jobs:
         ls twrp_cancunf.mk || echo "ERRORE: twrp_cancunf.mk NON TROVATO!"
 
 
-    - name: Build TWRP
+    - name: Build TWRP (Android 16 Protocol)
       run: |
         cd workspace
         
-        # 1. BYPASS (902 e 905)
-        sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/$(warning Bypassed 902/g' build/make/core/board_config.mk
-        sed -i 's/$(error Should not set BOARD_VENDOR_RAMDISK_FRAGMENTS/$(warning Bypassed 905/g' build/make/core/board_config.mk
-
-        # 2. SETUP AMBIENTE CON LIMITI RAM (Per evitare il crash dei 16GB)
+        # 1. BYPASS TOTALI (A16 richiede più permessi)
+        sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/$(warning Bypassed/g' build/make/core/board_config.mk
+        
+        # 2. SETUP AMBIENTE
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
-        export LC_ALL=C
-        export _JAVA_OPTIONS="-Xmx4g"
-        export SOONG_UI_MEMORY_LIMIT=14000000000
-        
-        # Forza Ninja a ignorare gli errori di sandbox (nsjail)
-        export BUILD_BROKEN_NINJA_USES_ENV_VARS=true
+        export BUILD_BROKEN_VINTF_CHECK=true
+        export BUILD_BROKEN_DUP_RULES=true
         
         # 3. LUNCH
         lunch twrp_cancunf-eng
 
-        # 4. PULIZIA MANUALE DELLE CACHE "PIGRE"
-        # Cancelliamo i file che dicono a Ninja che ha già finito
-        rm -rf out/.ninja_log out/.ninja_deps out/build-*.ninja
-        rm -rf out/target/product/cancunf/obj/PACKAGING
-        rm -rf out/target/product/cancunf/vendor_boot*
-
-        # 5. ESECUZIONE FORZATA (-j2 per non saturare la RAM)
-        # Usiamo 'm' invece di 'mka' per passare le variabili direttamente al core
-        m vendorbootimage \
-            -j2 \
-            TARGET_PRODUCT=twrp_cancunf \
-            TARGET_BUILD_VARIANT=eng \
-            PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true \
-            BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true
+        # 4. IL TRUCCO PER ANDROID 16
+        # In A16, a volte 'vendorbootimage' è protetto. 
+        # Chiediamo di buildare il 'recoveryimage' ma forzando la destinazione vendor.
+        mka recoveryimage -j2 \
+            BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true \
+            PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true
 
 
-    - name: Debug Path
-      run: |
+     - name: Debug Path
+       run: |
         cd workspace
         ls -R out/target/product/cancunf/
 
 
-    - name: Upload Recovery
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: TWRP-MotoG54
-        path: |
-          workspace/out/target/product/cancunf/vendor_boot.img
-          workspace/out/target/product/cancunf/*.img
+     - name: Upload Recovery
+       uses: actions/upload-artifact@v4
+       if: always()
+       with:
+         name: TWRP-MotoG54
+         path: |
+           workspace/out/target/product/cancunf/vendor_boot.img
+           workspace/out/target/product/cancunf/*.img
