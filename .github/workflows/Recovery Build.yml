@@ -78,7 +78,7 @@ jobs:
         export LC_ALL=C
         
         # 2. LUNCH
-        lunch ${{ env.MAKEFILE_NAME }}-eng || lunch twrp_${{ env.DEVICE_NAME }}-eng
+        lunch ${{ env.MAKEFILE_NAME }}-eng || lunch omni_${{ env.DEVICE_NAME }}-eng || lunch aosp_${{ env.DEVICE_NAME }}-eng
 
         # 3. PULIZIA AGGRESSIVA (Per uccidere il "No work to do")
         # Rimuoviamo i file ninja per forzare la ricalcularizzazione dei target
