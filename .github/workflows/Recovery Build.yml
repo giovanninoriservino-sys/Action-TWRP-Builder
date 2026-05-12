@@ -1,4 +1,4 @@
-name: Recovery Build
+name: Recovery Build - Giovanni Edition
 
 on:
   workflow_dispatch:
@@ -14,7 +14,6 @@ env:
   DEVICE_PATH: device/motorola/cancunf
   DEVICE_NAME: cancunf
   MAKEFILE_NAME: twrp_cancunf
-  BUILD_TARGET: vendorbootimage
 
 jobs:
   build:
@@ -53,66 +52,55 @@ jobs:
         cd workspace
         repo sync -j$(nproc --all) --force-sync --no-tags --no-clone-bundle
 
-    - name: Clone e Fix Matrioska
+    - name: Clone Device Tree
       run: |
         cd workspace
-        rm -rf device/motorola/cancunf
-        mkdir -p device/motorola/cancunf
+        rm -rf ${{ env.DEVICE_PATH }}
+        mkdir -p ${{ env.DEVICE_PATH }}
         git clone ${{ env.DEVICE_URL }} -b ${{ env.DEVICE_BRANCH }} /tmp/cancunf
+        # Copia intelligente per evitare l'effetto matrioska
         if [ -d "/tmp/cancunf/device/motorola/cancunf" ]; then
-          cp -r /tmp/cancunf/device/motorola/cancunf/* device/motorola/cancunf/
+          cp -r /tmp/cancunf/device/motorola/cancunf/* ${{ env.DEVICE_PATH }}/
         else
-          cp -r /tmp/cancunf/* device/motorola/cancunf/
+          cp -r /tmp/cancunf/* ${{ env.DEVICE_PATH }}/
         fi
 
-    - name: Ispezione Sorgenti Device
-      run: |
-        cd workspace/device/motorola/cancunf
-        echo "--- CONTENUTO CARTELLA DEVICE ---"
-        ls -F
-        echo "--- CONTENUTO AndroidProducts.mk ---"
-        cat AndroidProducts.mk
-        echo "--- VERIFICA ESISTENZA MAKEFILE ---"
-        ls twrp_cancunf.mk || echo "ERRORE: twrp_cancunf.mk NON TROVATO!"
-
-    - name: Build TWRP (Forced A16 Execution)
+    - name: Build TWRP (Forced Execution)
       run: |
         cd workspace
         
-        # 1. BYPASS E REGOLE BOARD
-        sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/$(warning Bypassed/g' build/make/core/board_config.mk
-        
-        # 2. SETUP AMBIENTE
+        # 1. SETUP AMBIENTE E FIX COMPATIBILITÀ
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
         export BUILD_BROKEN_VINTF_CHECK=true
         export BUILD_BROKEN_DUP_RULES=true
+        export LC_ALL=C
         
-        # 3. LUNCH
-        lunch twrp_cancunf-eng
+        # 2. LUNCH
+        lunch ${{ env.MAKEFILE_NAME }}-eng || lunch twrp_${{ env.DEVICE_NAME }}-eng
 
-        # 4. IL "KILLER" DEL NO WORK TO DO
-        # Cancelliamo i database di Ninja. Questo lo COSTRINGE a ricalcolare tutto.
-        echo "=== RESETTING NINJA DATABASE ==="
+        # 3. PULIZIA AGGRESSIVA (Per uccidere il "No work to do")
+        # Rimuoviamo i file ninja per forzare la ricalcularizzazione dei target
         rm -rf out/.ninja_log out/.ninja_deps out/build-*.ninja
-        # Cancelliamo la cartella di output specifica del device per sicurezza
-        rm -rf out/target/product/cancunf/obj/PACKAGING/vendor_boot_intermediates
         
-        m recoveryimage vendorbootimage -j2 \
-        BOARD_USES_RECOVERY_AS_BOOT=false \
-        BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true \
-        PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true
+        # 4. COMANDO DI BUILD OTTIMIZZATO
+        # Aggiungiamo 'bootimage' e 'adbd' per forzare Ninja a generare il ramdisk
+        m bootimage vendorbootimage -j$(nproc --all) \
+            BOARD_USES_RECOVERY_AS_BOOT=false \
+            BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true \
+            PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true \
+            BOARD_AVB_ENABLE=false
 
-    - name: Debug Path
+    - name: Check Output
       run: |
-        cd workspace
-        ls -R out/target/product/cancunf/ || echo "Cartella out ancora vuota"
+        ls -lh workspace/out/target/product/${{ env.DEVICE_NAME }}/vendor_boot.img || echo "Vendor Boot non generata"
+        ls -lh workspace/out/target/product/${{ env.DEVICE_NAME }}/boot.img || echo "Boot Image non generata"
 
-    - name: Upload Recovery
+    - name: Upload Artifacts
       uses: actions/upload-artifact@v4
-      if: always()
       with:
-        name: TWRP-MotoG54
+        name: TWRP-MotoG54-Giovanni
         path: |
-          workspace/out/target/product/cancunf/vendor_boot.img
-          workspace/out/target/product/cancunf/*.img
+          workspace/out/target/product/${{ env.DEVICE_NAME }}/vendor_boot.img
+          workspace/out/target/product/${{ env.DEVICE_NAME }}/boot.img
+          workspace/out/target/product/${{ env.DEVICE_NAME }}/*.img
