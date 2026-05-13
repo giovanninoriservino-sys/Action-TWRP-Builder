@@ -69,21 +69,23 @@ jobs:
       run: |
         cd workspace
         
-        # 1. BYPASS ERRORI 902 E 905 (Aggiornati per Android 12/16)
+        # 1. SOLITI BYPASS
         sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/$(warning Bypassed 902/g' build/make/core/board_config.mk
         sed -i 's/$(error Should not set BOARD_VENDOR_RAMDISK_FRAGMENTS/$(warning Bypassed 905/g' build/make/core/board_config.mk
 
-        # 2. SETUP AMBIENTE + FIX PERCORSI
+        # 2. SETUP AMBIENTE - I KILLER DEI REQUISITI
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
-        export BUILD_BROKEN_ARTIFACT_PATH_REQUIREMENTS=true
         export LC_ALL=C
         
-        # 3. LUNCH (Usiamo il prodotto che abbiamo blindato prima)
+        # Queste due righe insieme forzano Ninja a ignorare i file "offending"
+        export BUILD_BROKEN_ARTIFACT_PATH_REQUIREMENTS=true
+        export PRODUCT_ARTIFACT_PATH_REQUIREMENT_IGNORE_PATHS="vendor/*"
+
+        # 3. LUNCH
         lunch twrp_cancunf-eng || { export TARGET_PRODUCT=twrp_cancunf; export TARGET_BUILD_VARIANT=eng; }
 
-        # 4. COMPILAZIONE TOTALE
-        # Usiamo 'm' per far partire i 18.500 task
+        # 4. COMPILAZIONE
         m vendorbootimage -j$(nproc) \
             PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true \
             BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true
