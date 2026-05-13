@@ -69,36 +69,28 @@ jobs:
       run: |
         cd workspace
         
-        # 1. NEUTRALIZZAZIONE ERRORI BLOCCANTI (902, 905 e Artifact Path)
+        # 1. BYPASS ERRORI HARDWARE (902, 905)
         sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/$(warning Bypassed 902/g' build/make/core/board_config.mk
         sed -i 's/$(error Should not set BOARD_VENDOR_RAMDISK_FRAGMENTS/$(warning Bypassed 905/g' build/make/core/board_config.mk
         
-        # IL COLPO DI GRAZIA: Trasformiamo l'errore degli artifact in un semplice avviso
-        # Cerchiamo la riga che lancia l'errore nel file specifico segnalato dai log
+        # 2. BYPASS ARTIFACT PATH (Il killer del 99%)
         sed -i 's/$(error Build failed.)/$(warning Bypassed Artifact Check)/g' build/make/core/artifact_path_requirements.mk
 
-        # 2. SETUP AMBIENTE
+        # 3. SETUP AMBIENTE E VARIABILI
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
         export BUILD_BROKEN_ARTIFACT_PATH_REQUIREMENTS=true
+        export PRODUCT_ARTIFACT_PATH_REQUIREMENT_IGNORE_PATHS="vendor/*"
         export LC_ALL=C
-
-        # 1. Neutralizza l'errore specifico alla riga 26 (il "sed" chirurgico)
-sed -i 's/$(error Build failed.)/$(warning Bypassed Artifact Check)/g' build/make/core/artifact_path_requirements.mk
-
-        # 2. Impedisci a generic_system.mk di fare il poliziotto
-# Questo comando disabilita il controllo degli artifact per l'intero prodotto
-export PRODUCT_ARTIFACT_PATH_REQUIREMENT_IGNORE_PATHS="vendor/*"
-export BUILD_BROKEN_ARTIFACT_PATH_REQUIREMENTS=true
         
-        # 3. LUNCH
+        # 4. LUNCH
         lunch twrp_cancunf-eng || { export TARGET_PRODUCT=twrp_cancunf; export TARGET_BUILD_VARIANT=eng; }
 
-        # 4. COMPILAZIONE
-        # Ora Ninja non potrà più fermarsi al 99% della preparazione
+        # 5. COMPILAZIONE TOTALE
         m vendorbootimage -j$(nproc) \
             PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true \
             BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true
+
 
     - name: Check Output
       run: |
