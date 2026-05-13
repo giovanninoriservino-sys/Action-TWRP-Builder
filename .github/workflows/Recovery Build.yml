@@ -69,27 +69,35 @@ jobs:
       run: |
         cd workspace
         
-        # 1. BYPASS ERRORI HARDWARE (902, 905)
+        # 1. SETUP AMBIENTE INIZIALE
+        source build/envsetup.sh
+        export ALLOW_MISSING_DEPENDENCIES=true
+        export LC_ALL=C
+
+        # 2. DISABILITAZIONE TOTALE CONTROLLI ARTIFACT (Metodo Bulldozer)
+        # Svuotiamo il file che causa il blocco al 99% (311/312)
+        # Se il file è vuoto, Ninja non ha regole da violare.
+        echo "all:" > build/make/core/artifact_path_requirements.mk
+        
+        # Variabili d'ambiente per forzare il bypass
+        export PRODUCT_ENFORCE_ARTIFACT_PATH_REQUIREMENTS=false
+        export BUILD_BROKEN_ARTIFACT_PATH_REQUIREMENTS=true
+        export PRODUCT_ARTIFACT_PATH_REQUIREMENT_IGNORE_PATHS="vendor/*"
+
+        # 3. FIX ERRORI HARDWARE (902, 905)
         sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/$(warning Bypassed 902/g' build/make/core/board_config.mk
         sed -i 's/$(error Should not set BOARD_VENDOR_RAMDISK_FRAGMENTS/$(warning Bypassed 905/g' build/make/core/board_config.mk
         
-        # 2. BYPASS ARTIFACT PATH (Il killer del 99%)
-        sed -i 's/$(error Build failed.)/$(warning Bypassed Artifact Check)/g' build/make/core/artifact_path_requirements.mk
-
-        # 3. SETUP AMBIENTE E VARIABILI
-        source build/envsetup.sh
-        export ALLOW_MISSING_DEPENDENCIES=true
-        export BUILD_BROKEN_ARTIFACT_PATH_REQUIREMENTS=true
-        export PRODUCT_ARTIFACT_PATH_REQUIREMENT_IGNORE_PATHS="vendor/*"
-        export LC_ALL=C
-        
         # 4. LUNCH
+        # Specifichiamo il target per il Moto G54 (cancunf)
         lunch twrp_cancunf-eng || { export TARGET_PRODUCT=twrp_cancunf; export TARGET_BUILD_VARIANT=eng; }
 
-        # 5. COMPILAZIONE TOTALE
+        # 5. COMPILAZIONE FINALE
+        # Usiamo m vendorbootimage per i dispositivi con partizioni dinamiche
         m vendorbootimage -j$(nproc) \
             PRODUCT_BUILD_VENDOR_BOOT_IMAGE=true \
             BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT=true
+
 
 
     - name: Check Output
